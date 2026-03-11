@@ -5,12 +5,20 @@ An advanced, modular hedge fund research stack that simulates an institutional q
 - synthetic market data with latent bull/bear regimes
 - multi-horizon feature engineering
 - ensemble alpha model with confidence scaling
-- **multi-agent research swarm for SEC filings and earnings-call style language**
+- multi-agent research swarm for SEC filings and earnings-call style language
 - constraint-aware market-neutral portfolio construction
 - volatility targeting and scenario risk checks
 - event-driven backtesting with turnover-based transaction costs
 
-This is aligned with the emerging AI-native fund thesis (including YC's view): autonomous agent teams can continuously parse filings, synthesize analyst-like views, and feed live alpha overlays.
+## Added production-oriented capabilities
+
+- **real SEC EDGAR ingestion and transcript feed adapters** (`ingestion.py`)
+- **LLM-based analyst agent interface with tool-use planning** (`llm_agents.py`)
+- **execution adapters and broker routing engine** (`execution.py`)
+- **online learning/drift monitoring primitives** (`monitoring.py`)
+- **production risk controls and compliance gates** (`controls.py`)
+
+This is aligned with the AI-native fund thesis: autonomous agent teams parse filings/transcripts, synthesize analyst-like views, and route governed trades.
 
 ## Quickstart
 
@@ -28,16 +36,12 @@ python run_fund.py
 - `models.py`: ensemble alpha forecaster
 - `filings.py`: synthetic filing/earnings-call text stream
 - `agents.py`: autonomous research agents + swarm aggregation
+- `ingestion.py`: EDGAR/transcript ingestion adapters
+- `llm_agents.py`: LLM analyst agent with tool contracts
+- `execution.py`: broker adapters and order routing
+- `monitoring.py`: drift monitoring
+- `controls.py`: pre-trade risk/compliance gates
 - `risk.py`: covariance, expected shortfall, scenario loss
 - `portfolio.py`: constrained optimizer and execution cost model
 - `backtest.py`: event-driven backtesting engine
-- `orchestrator.py`: end-to-end strategy pipeline
-
-## Notes
-
-This framework is designed for research and can be extended with:
-- real SEC EDGAR ingestion and transcript feeds
-- LLM-based analyst agents with tool use
-- execution adapters and broker routing
-- online learning and drift monitoring
-- production risk controls and compliance gates
+- `orchestrator.py`: end-to-end research + production cycle orchestration

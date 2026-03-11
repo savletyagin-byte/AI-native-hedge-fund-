@@ -1,6 +1,9 @@
 import pandas as pd
 
 from ai_native_hedge_fund import AINativeHedgeFund, FundConfig, ResearchSwarm
+from ai_native_hedge_fund.controls import ProductionControlGate
+from ai_native_hedge_fund.execution import ExecutionEngine
+from ai_native_hedge_fund.monitoring import DriftMonitor
 
 
 def test_research_cycle_outputs_metrics():
@@ -40,3 +43,34 @@ def test_research_swarm_scores_filing_documents():
 
     assert scores["AAA"] > scores["BBB"]
     assert scores.index.tolist() == ["AAA", "BBB"]
+
+
+def test_production_cycle_controls_and_execution_path():
+    fund = AINativeHedgeFund(FundConfig(universe_size=30, lookback_days=80))
+    tickers = [f"P{i:03d}" for i in range(30)]
+
+    prod = fund.run_production_cycle(tickers, target_notional=1_000_000)
+
+    assert "control_passed" in prod
+    assert "execution_reports" in prod
+    assert "feature_drift_score" in prod
+    assert isinstance(prod["feature_drift_score"], float)
+
+
+def test_control_gate_rejects_overweight_portfolio():
+    gate = ProductionControlGate(max_gross=1.5, max_single_weight=0.2, min_names=3)
+    w = pd.Series({"A": 0.8, "B": -0.8, "C": 0.1})
+    result = gate.check(w)
+    assert not result.passed
+    assert len(result.reasons) >= 1
+
+
+def test_execution_and_drift_utilities():
+    engine = ExecutionEngine()
+    reports = engine.rebalance(pd.Series({"A": 0.2, "B": -0.1}), notional=1000)
+    assert len(reports) == 2
+
+    monitor = DriftMonitor()
+    baseline = pd.DataFrame({"f": [0.1, 0.2, 0.3]})
+    current = pd.DataFrame({"f": [1.0, 1.2, 1.1]})
+    assert monitor.feature_drift_score(baseline, current) > 0
