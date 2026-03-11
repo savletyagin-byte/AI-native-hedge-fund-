@@ -15,6 +15,9 @@ class FundConfig:
     random_seed: int = 7
     filing_alpha_weight: float = 0.35
     agent_swarm_enabled: bool = True
+    live_edgar_enabled: bool = False
+    allow_shorts: bool = True
+    restricted_tickers: tuple[str, ...] = ()
     feature_set: tuple[str, ...] = field(
         default_factory=lambda: (
             "momentum_21",

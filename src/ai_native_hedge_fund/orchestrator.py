@@ -10,10 +10,12 @@ from .data import MarketDataEngine
 from .execution import ExecutionEngine, ExecutionReport
 from .features import FeatureFactory
 from .filings import FilingStream
+from .governance import ComplianceEngine
 from .ingestion import EdgarIngestionClient, TranscriptFeedClient
 from .models import AlphaEnsemble
 from .monitoring import DriftMonitor
 from .portfolio import PortfolioConstructor
+from .reporting import PerformanceReporter
 from .risk import RiskEngine
 
 
@@ -35,10 +37,15 @@ class AINativeHedgeFund:
         self.transcript_client = TranscriptFeedClient()
         self.execution_engine = ExecutionEngine()
         self.drift_monitor = DriftMonitor()
+        self.reporter = PerformanceReporter()
         self.control_gate = ProductionControlGate(
             max_gross=self.config.max_gross_leverage,
             max_single_weight=self.config.max_single_weight,
             min_names=max(10, self.config.universe_size // 6),
+        )
+        self.compliance_engine = ComplianceEngine(
+            restricted_tickers=set(self.config.restricted_tickers),
+            allow_shorts=self.config.allow_shorts,
         )
 
     def run_research_cycle(self, tickers: list[str], periods: int = 756) -> dict[str, float | pd.Series]:
@@ -53,6 +60,7 @@ class AINativeHedgeFund:
 
         returns = market.xs("ret", axis=1, level=1)
         result = self.backtester.run(signal=signal, returns=returns)
+        result.update(self.reporter.summarize(result["pnl"]))
 
         scenario = self.risk_engine.scenario_loss(
             weights=signal.iloc[-1] / (signal.iloc[-1].abs().sum() + 1e-12) * self.config.max_gross_leverage,
@@ -67,6 +75,11 @@ class AINativeHedgeFund:
         signal = self.alpha_model.predict(features)
 
         filing_docs = self.filing_stream.generate(tickers)
+        if self.config.live_edgar_enabled and tickers:
+            live_docs = self.edgar_client.fetch_company_filings(cik=tickers[0])
+            if live_docs:
+                filing_docs[tickers[0]] += " " + " ".join(doc.text for doc in live_docs)
+
         filing_alpha = self.research_swarm.aggregate(filing_docs)
         signal = self._apply_filing_overlay(signal, filing_alpha)
 
@@ -75,8 +88,10 @@ class AINativeHedgeFund:
         target_weights = self.allocator.optimize(signal.iloc[-1], cov)
 
         control = self.control_gate.check(target_weights)
+        compliance = self.compliance_engine.review_orders(target_weights)
+
         reports: list[ExecutionReport] = []
-        if control.passed:
+        if control.passed and compliance.approved:
             reports = self.execution_engine.rebalance(target_weights, notional=target_notional)
 
         feature_drift = self.drift_monitor.feature_drift_score(
@@ -87,9 +102,12 @@ class AINativeHedgeFund:
         return {
             "control_passed": control.passed,
             "control_reasons": control.reasons,
+            "compliance_passed": compliance.approved,
+            "compliance_reasons": compliance.reasons,
             "execution_reports": reports,
             "feature_drift_score": feature_drift,
             "target_weights": target_weights,
+            "exposure": self.reporter.exposure_breakdown(target_weights),
         }
 
     def _apply_filing_overlay(self, signal: pd.DataFrame, filing_alpha: pd.Series) -> pd.DataFrame:

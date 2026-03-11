@@ -3,7 +3,9 @@ import pandas as pd
 from ai_native_hedge_fund import AINativeHedgeFund, FundConfig, ResearchSwarm
 from ai_native_hedge_fund.controls import ProductionControlGate
 from ai_native_hedge_fund.execution import ExecutionEngine
+from ai_native_hedge_fund.governance import ComplianceEngine
 from ai_native_hedge_fund.monitoring import DriftMonitor
+from ai_native_hedge_fund.reporting import PerformanceReporter
 
 
 def test_research_cycle_outputs_metrics():
@@ -14,6 +16,8 @@ def test_research_cycle_outputs_metrics():
     result = fund.run_research_cycle(tickers=tickers, periods=260)
 
     assert "sharpe" in result
+    assert "cagr" in result
+    assert "win_rate" in result
     assert "max_drawdown" in result
     assert "nav" in result
     assert isinstance(result["nav"], pd.Series)
@@ -52,8 +56,10 @@ def test_production_cycle_controls_and_execution_path():
     prod = fund.run_production_cycle(tickers, target_notional=1_000_000)
 
     assert "control_passed" in prod
+    assert "compliance_passed" in prod
     assert "execution_reports" in prod
     assert "feature_drift_score" in prod
+    assert "exposure" in prod
     assert isinstance(prod["feature_drift_score"], float)
 
 
@@ -65,12 +71,21 @@ def test_control_gate_rejects_overweight_portfolio():
     assert len(result.reasons) >= 1
 
 
-def test_execution_and_drift_utilities():
+def test_execution_drift_compliance_and_reporting_utilities():
     engine = ExecutionEngine()
     reports = engine.rebalance(pd.Series({"A": 0.2, "B": -0.1}), notional=1000)
     assert len(reports) == 2
+    assert reports[0].slippage_bps > 0
 
     monitor = DriftMonitor()
     baseline = pd.DataFrame({"f": [0.1, 0.2, 0.3]})
     current = pd.DataFrame({"f": [1.0, 1.2, 1.1]})
     assert monitor.feature_drift_score(baseline, current) > 0
+
+    compliance = ComplianceEngine(restricted_tickers={"A"}, allow_shorts=False)
+    decision = compliance.review_orders(pd.Series({"A": 0.1, "B": -0.1}))
+    assert not decision.approved
+
+    reporter = PerformanceReporter()
+    summary = reporter.summarize(pd.Series([0.01, -0.005, 0.002]))
+    assert "cagr" in summary

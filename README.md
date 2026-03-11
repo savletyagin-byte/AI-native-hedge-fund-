@@ -4,11 +4,10 @@ An advanced, modular hedge fund research stack that simulates an institutional q
 
 - synthetic market data with latent bull/bear regimes
 - multi-horizon feature engineering
-- ensemble alpha model with confidence scaling
+- regime-aware ensemble alpha model with confidence scaling
 - multi-agent research swarm for SEC filings and earnings-call style language
-- constraint-aware market-neutral portfolio construction
-- volatility targeting and scenario risk checks
-- event-driven backtesting with turnover-based transaction costs
+- execution adapters, slippage estimation, and broker routing
+- online drift monitoring, production controls, and compliance gating
 
 ## Added production-oriented capabilities
 
@@ -16,9 +15,8 @@ An advanced, modular hedge fund research stack that simulates an institutional q
 - **LLM-based analyst agent interface with tool-use planning** (`llm_agents.py`)
 - **execution adapters and broker routing engine** (`execution.py`)
 - **online learning/drift monitoring primitives** (`monitoring.py`)
-- **production risk controls and compliance gates** (`controls.py`)
-
-This is aligned with the AI-native fund thesis: autonomous agent teams parse filings/transcripts, synthesize analyst-like views, and route governed trades.
+- **production risk controls and compliance gates** (`controls.py`, `governance.py`)
+- **performance and exposure reporting** (`reporting.py`)
 
 ## Quickstart
 
@@ -33,14 +31,16 @@ python run_fund.py
 
 - `data.py`: synthetic market generator with latent regime switching
 - `features.py`: alpha and regime features
-- `models.py`: ensemble alpha forecaster
+- `models.py`: regime-aware ensemble alpha forecaster
 - `filings.py`: synthetic filing/earnings-call text stream
 - `agents.py`: autonomous research agents + swarm aggregation
 - `ingestion.py`: EDGAR/transcript ingestion adapters
 - `llm_agents.py`: LLM analyst agent with tool contracts
-- `execution.py`: broker adapters and order routing
+- `execution.py`: broker adapters, order routing, slippage estimator
 - `monitoring.py`: drift monitoring
-- `controls.py`: pre-trade risk/compliance gates
+- `controls.py`: pre-trade risk controls
+- `governance.py`: compliance policy gates
+- `reporting.py`: KPI and exposure reporting
 - `risk.py`: covariance, expected shortfall, scenario loss
 - `portfolio.py`: constrained optimizer and execution cost model
 - `backtest.py`: event-driven backtesting engine
