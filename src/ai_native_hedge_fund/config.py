@@ -13,6 +13,8 @@ class FundConfig:
     transaction_cost_bps: float = 3.0
     scenario_shock: float = 0.08
     random_seed: int = 7
+    filing_alpha_weight: float = 0.35
+    agent_swarm_enabled: bool = True
     feature_set: tuple[str, ...] = field(
         default_factory=lambda: (
             "momentum_21",

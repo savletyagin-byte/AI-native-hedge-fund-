@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ai_native_hedge_fund import AINativeHedgeFund, FundConfig
+from ai_native_hedge_fund import AINativeHedgeFund, FundConfig, ResearchSwarm
 
 
 def test_research_cycle_outputs_metrics():
@@ -28,3 +28,15 @@ def test_pipeline_generates_aligned_shapes():
     returns = market.xs("ret", axis=1, level=1)
     assert signal.shape == returns.shape
     assert set(signal.columns) == set(tickers)
+
+
+def test_research_swarm_scores_filing_documents():
+    filing_texts = {
+        "AAA": "guidance raised with margin expansion and share repurchase",
+        "BBB": "material weakness and lawsuit with guidance cut",
+    }
+    swarm = ResearchSwarm()
+    scores = swarm.aggregate(filing_texts)
+
+    assert scores["AAA"] > scores["BBB"]
+    assert scores.index.tolist() == ["AAA", "BBB"]
